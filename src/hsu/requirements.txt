@@ -1,0 +1,11 @@
+openai
+pymupdf
+qdrant-client
+tiktoken
+langchain-text-splitters
+jieba
+rank-bm25
+sentence-transformers
+fastapi
+uvicorn
+python-multipart
