@@ -109,16 +109,13 @@ Checkpointer 是 LangGraph 裡用來保存流程狀態的機制。
 
 如果沒有 Checkpointer，每一次呼叫 graph 都像是重新開始；如果有 Checkpointer，LangGraph 可以根據 `thread_id` 記住某個使用者或某段對話的狀態。
 
-之後你在 LangGraph 大概會長得像這樣：
+目前本專案先不使用記憶體版 checkpointer，所以 LangGraph 會先長得像這樣：
 
 ```python
-from langgraph.checkpoint.memory import MemorySaver
-
-checkpointer = MemorySaver()
-graph = builder.compile(checkpointer=checkpointer)
+graph = builder.compile()
 ```
 
-正式部署時，`MemorySaver` 通常只適合開發測試；如果要多人使用或服務重啟後仍保留狀態，會再改成資料庫型的 checkpointer。
+之後如果要多人使用，或希望服務重啟後仍保留流程狀態，會再另外接 SQLite、資料庫，或自訂儲存方式。
 
 ## 7. 本階段可以展示的成果
 

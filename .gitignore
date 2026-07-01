@@ -8,4 +8,3 @@ __pycache__/
 tmp/
 *.egg-info/
 memory/chat_records.json
-src/hsu/config.py

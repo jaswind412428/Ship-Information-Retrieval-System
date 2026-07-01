@@ -21,7 +21,7 @@ def retrieve_node(state: GraphState, docs: list[dict[str, object]] | None = None
     append_node_record(
         state=state,
         node="retrieve",
-        status=state["status"],
+        status="success",
         data={
             "docs": docs or [],
             "message": "retrieve 節點已記錄原始查詢。",
@@ -46,7 +46,7 @@ def rerank_node(
     append_node_record(
         state=state,
         node="rerank",
-        status=state["status"],
+        status="success",
         data={
             "docs": docs or [],
             "message": "rerank 節點已執行並儲存 docs，目前尚未接入實際排序。",

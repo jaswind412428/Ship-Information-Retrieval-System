@@ -42,6 +42,9 @@ class GraphState(TypedDict):
     ai_answer: str
     status: GraphStatus
     node_records: NotRequired[list[NodeRecord]]
+    rewritten_question: NotRequired[str]
+    memory_context: NotRequired[str]
+    use_memory: NotRequired[bool]
 
 
 def create_initial_state(

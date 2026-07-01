@@ -305,3 +305,19 @@ docs/LANGGRAPH_RAG_INTEGRATION_TEMPLATE.md
 2. 檢索組要回傳哪些欄位。
 3. `retrieved_docs`、`reranked_docs`、`context` 的格式。
 4. JSON 中每個 node 要記錄什麼。
+
+## 9. 正式 LangGraph
+
+正式 `StateGraph` 設計請見：
+
+```text
+docs/LANGGRAPH_GRAPH.md
+```
+
+目前正式 graph 已建立：
+
+```text
+START → retrieve → rerank → generate → END
+```
+
+目前先不使用記憶體版 checkpointer；Checkpointer 之後若需要，會另外接 SQLite、資料庫或自訂儲存方式。
