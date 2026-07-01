@@ -80,5 +80,8 @@ def load_pdf_files(filenames):
 
 
 def list_pdf_files():
-    """列出 data/ 資料夾裡所有 PDF 檔名。"""
+    """列出 data/ 資料夾裡所有 PDF 檔名。data 資料夾不存在時回傳空清單
+    （純查詢場景，例如 src/hsu 沒有 data 資料夾，不該報錯）。"""
+    if not os.path.isdir(config.DATA_DIR):
+        return []
     return [f for f in os.listdir(config.DATA_DIR) if f.lower().endswith(".pdf")]
