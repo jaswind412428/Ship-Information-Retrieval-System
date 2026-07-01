@@ -32,6 +32,7 @@ def vector_search(question, top_k=20):
             "text": doc,
             "source": meta["source"],
             "page": meta["page"],
+            "vector_score": 1 - dist,   # 向量相似度（越高越像），供分析用
             "rank": rank,
         })
     return hits
@@ -71,8 +72,19 @@ def fuse(rank_lists, top_k):
     return results
 
 
-def search(question, top_k=None, use_multi_query=True):
-    """檢索主入口：（改寫）→ 多子查詢 →（向量+BM25）→ RRF 粗篩 → 重排序精排。"""
+def search(question, top_k=None, use_multi_query=True, return_stages=False):
+    """檢索主入口：（改寫）→ 多子查詢 →（向量+BM25）→ RRF 粗篩 → 重排序精排。
+
+    return_stages=False（預設）：只回最終結果 list（重排序後 Top-K）。
+    return_stages=True：回 dict，包含各階段中間結果，供組員記錄/分析：
+        {
+          "final": [...],          # 最終結果（重排序後 Top-K）
+          "vector_hits": [...],    # 向量搜尋原始結果（各子查詢合起來）
+          "bm25_hits": [...],      # BM25 搜尋原始結果（各子查詢合起來）
+          "rrf_candidates": [...], # RRF 合併後、重排序前的候選
+          "queries": [...],        # 改寫後的子查詢清單
+        }
+    """
     if top_k is None:
         top_k = config.TOP_K
 
@@ -84,18 +96,34 @@ def search(question, top_k=None, use_multi_query=True):
 
     # 2. 每個子查詢各跑向量 + BM25，全部收集成多路
     rank_lists = []
+    all_vector_hits = []   # 收集向量搜尋原始結果（給 return_stages 用）
+    all_bm25_hits = []     # 收集 BM25 搜尋原始結果
     for q in queries:
-        rank_lists.append(vector_search(q, top_k=20))
-        rank_lists.append(bm25_search.search(q, top_k=20))
+        v = vector_search(q, top_k=20)
+        b = bm25_search.search(q, top_k=20)
+        rank_lists.append(v)
+        rank_lists.append(b)
+        all_vector_hits.extend(v)
+        all_bm25_hits.extend(b)
 
     # 3. RRF 統一合併，粗篩出候選（預設 Top-20）
     candidates = fuse(rank_lists, config.RRF_CANDIDATES)
 
     # 4. Cross-Encoder 重排序，精排出最終 Top-K（用原始問句評分）
     if config.USE_RERANK:
-        return reranker.rerank(question, candidates, top_n=top_k)
+        final = reranker.rerank(question, candidates, top_n=top_k)
     else:
-        return candidates[:top_k]
+        final = candidates[:top_k]
+
+    if return_stages:
+        return {
+            "final": final,
+            "vector_hits": all_vector_hits,
+            "bm25_hits": all_bm25_hits,
+            "rrf_candidates": candidates,
+            "queries": queries,
+        }
+    return final
 
 
 def print_hits(question, hits):
