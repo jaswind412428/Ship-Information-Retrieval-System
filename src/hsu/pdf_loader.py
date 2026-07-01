@@ -10,7 +10,7 @@ import os
 import fitz  # PyMuPDF
 import tiktoken
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-import config
+from . import config
 
 # 用 OpenAI 的 tokenizer 來算 token 數（cl100k_base 適用於 embedding-3 系列）
 _encoder = tiktoken.get_encoding("cl100k_base")

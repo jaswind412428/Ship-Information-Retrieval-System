@@ -17,12 +17,12 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-import config
-import vectorstore
-import bm25_search
-import retriever
-import generator
-import image_processor
+from . import config
+from . import vectorstore
+from . import bm25_search
+from . import retriever
+from . import generator
+from . import image_processor
 
 app = FastAPI(title="Marine RAG API")
 

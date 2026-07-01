@@ -9,11 +9,11 @@
 RRF（Reciprocal Rank Fusion）：不看絕對分數，只看每筆在各路排第幾名，
 把排名的倒數加起來。避免不同來源分數尺度不同互相干擾。
 """
-import config
-import bm25_search
-import query_rewriter
-import reranker
-from vectorstore import get_collection, embed_texts
+from . import config
+from . import bm25_search
+from . import query_rewriter
+from . import reranker
+from .vectorstore import get_collection, embed_texts
 
 RRF_K = 60   # RRF 常數（業界慣用 60）
 

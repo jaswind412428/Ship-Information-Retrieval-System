@@ -8,7 +8,7 @@
 import re
 import jieba
 from rank_bm25 import BM25Okapi
-from vectorstore import get_collection
+from .vectorstore import get_collection
 
 # 全域 BM25 索引（啟動時建一次，之後查詢重複用）
 _bm25 = None

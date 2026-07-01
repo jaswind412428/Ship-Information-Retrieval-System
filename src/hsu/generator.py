@@ -5,7 +5,7 @@ LLM 生成答案（RAG 的 "G"）。
 generate_answer_text：只回傳字串（給 API 用）
 generate_answer：     回傳並印出（給命令列 main.py 用）
 """
-import config
+from . import config
 from openai import OpenAI
 
 client = OpenAI(api_key=config.OPENAI_API_KEY)

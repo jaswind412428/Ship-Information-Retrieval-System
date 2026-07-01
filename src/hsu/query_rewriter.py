@@ -4,7 +4,7 @@
 並特別要求包含英文版本，解決「中文查詢撈不到英文文件」的跨語言問題。
 """
 import json
-import config
+from . import config
 from openai import OpenAI
 
 client = OpenAI(api_key=config.OPENAI_API_KEY)

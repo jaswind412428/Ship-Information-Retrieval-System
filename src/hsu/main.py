@@ -6,13 +6,13 @@
 - 文字查詢：直接輸入問題
 - 以圖搜圖：輸入  img:圖片路徑   例如  img:test.png
 """
-import config
-import pdf_loader
-import vectorstore
-import retriever
-import generator
-import bm25_search
-import image_processor
+from . import config
+from . import pdf_loader
+from . import vectorstore
+from . import retriever
+from . import generator
+from . import bm25_search
+from . import image_processor
 
 
 def build():
@@ -79,12 +79,10 @@ def ask_by_image(image_path):
 def main():
     print("\n========== Marine RAG 系統 ==========\n")
 
-    if not vectorstore.index_exists():
-        print("尚未建立索引，開始建立...\n")
-        build()
-    else:
-        print("✓ 已有索引，檢查是否有新 PDF...\n")
-        sync_new_pdfs()
+    # 一律用「自動偵測」：比對雲端已有哪些 PDF，只處理還沒進雲端的。
+    # 這樣可以一份一份加（data 裡放幾份就只處理缺的幾份），失敗也只需補那一份。
+    print("檢查 data/ 裡有哪些 PDF 還沒進雲端...\n")
+    sync_new_pdfs()
 
     bm25_search.build_bm25()
 

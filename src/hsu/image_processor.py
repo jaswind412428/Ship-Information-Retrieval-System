@@ -13,7 +13,7 @@ import os
 import base64
 import fitz  # PyMuPDF
 from openai import OpenAI
-import config
+from . import config
 
 client = OpenAI(api_key=config.OPENAI_API_KEY)
 

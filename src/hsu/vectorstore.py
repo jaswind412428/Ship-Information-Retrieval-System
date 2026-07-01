@@ -9,7 +9,7 @@ import uuid
 from openai import OpenAI
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
-import config
+from . import config
 
 client = OpenAI(api_key=config.OPENAI_API_KEY)
 
@@ -20,7 +20,7 @@ _qdrant = None
 def _get_qdrant():
     global _qdrant
     if _qdrant is None:
-        _qdrant = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY)
+        _qdrant = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY, timeout=120)
     return _qdrant
 
 
@@ -115,9 +115,9 @@ def _write_points(chunks, vecs):
                 "content_type": c.get("content_type", "text"),
             },
         ))
-    batch = 500
+    batch = 100   # 每批小一點，避免單次傳太多導致雲端逾時
     for i in range(0, len(points), batch):
-        _get_qdrant().upsert(config.COLLECTION_NAME, points=points[i:i + batch])
+        _get_qdrant().upsert(config.COLLECTION_NAME, points=points[i:i + batch], wait=True)
         print(f"  寫入進度：{min(i + batch, len(points))}/{len(points)}")
 
 

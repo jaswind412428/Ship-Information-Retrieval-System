@@ -10,7 +10,7 @@ RRF 粗篩出 Top-20 後，用 BGE Reranker 對每筆做真實相關度評分，
 所以就算 BM25 撈進不相關內容，這層也能把它降下去。
 """
 from sentence_transformers import CrossEncoder
-import config
+from . import config
 
 # 全域載入一次（第一次會下載模型，約 600MB，之後快取在本機）
 _model = None
