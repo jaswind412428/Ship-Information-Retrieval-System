@@ -1,7 +1,7 @@
 """可被 CLI 與 FastAPI 共用的 LangGraph 流程。"""
 
 from LangGraph.memory_store import append_node_record, upsert_chat_record
-from LangGraph.nodes import generate_node, rerank_node, retrieve_node
+from LangGraph.graph import get_compiled_graph
 from LangGraph.router import route_question
 from LangGraph.states import GraphState, create_initial_state
 
@@ -24,6 +24,9 @@ def run_chat_flow(
         user_id=user_id,
         thread_id=thread_id,
     )
+    state["rewritten_question"] = router_result["rewritten_question"]
+    state["memory_context"] = router_result["memory_context"]
+    state["use_memory"] = router_result["use_memory"]
 
     append_node_record(
         state=state,
@@ -40,12 +43,9 @@ def run_chat_flow(
     )
     upsert_chat_record(state)
 
-    retrieve_node(state)
-    rerank_node(state)
-    return generate_node(
+    graph = get_compiled_graph()
+    result = graph.invoke(
         state,
-        question_for_ai=router_result["rewritten_question"],
-        memory_context=router_result["memory_context"]
-        if router_result["use_memory"]
-        else None,
+        config={"configurable": {"thread_id": thread_id}},
     )
+    return result

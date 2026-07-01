@@ -65,3 +65,5 @@ http://127.0.0.1:8000/docs
 資料夾用途請見 [專案資料夾說明](docs/PROJECT_STRUCTURE.md)。
 
 LangChain 與 LangGraph 的差別請見 [第一項：初始化語言模型](docs/01_LLM_INITIALIZATION.md)。
+
+正式 LangGraph 流程請見 [LangGraph 設計](docs/LANGGRAPH_GRAPH.md)。
