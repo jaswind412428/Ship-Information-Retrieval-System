@@ -10,9 +10,13 @@ st.set_page_config(page_title="造船工程知識代理系統", page_icon="🚢"
 # ==========================================
 # 1. 狀態初始化與處理邏輯
 # ==========================================
-# 初始化歷史紀錄清單 (存放過去的所有對話)
+# 初始化歷史紀錄清單
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+
+# 初始化當前對話 ID (給這串對話一個專屬的身份證)
+if "current_thread_id" not in st.session_state:
+    st.session_state.current_thread_id = datetime.now().strftime("thread_%Y%m%d_%H%M%S")
 
 # 初始化當前對話
 if "messages" not in st.session_state:
@@ -20,52 +24,46 @@ if "messages" not in st.session_state:
         {"role": "assistant", "content": "您好！請問今天想查詢哪方面的造船規範或工程知識？"}
     ]
 
-def start_new_chat():
-    """處理建立新對話的邏輯：將當前對話存檔後清空"""
-    # 如果當前對話有內容（超過一句初始問候語），則將其存入歷史紀錄
-    if len(st.session_state.messages) > 1:
-        # 擷取使用者的第一個問題作為標題，若太長則截斷
-        first_user_msg = next((msg["content"] for msg in st.session_state.messages if msg["role"] == "user"), "未命名對話")
-        title = first_user_msg[:15] + "..." if len(first_user_msg) > 15 else first_user_msg
-        
-        st.session_state.chat_history.append({
-            "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "title": title,
-            "messages": st.session_state.messages.copy()
-        })
-    
-    # 重置當前對話畫面
-    st.session_state.messages = [
-        {"role": "assistant", "content": "您好！請問今天想查詢哪方面的造船規範或工程知識？"}
-    ]
-
 # ==========================================
-# 2. 側邊欄設定 (加入新對話按鈕與歷史紀錄)
+# 2. 側邊欄：功能按鈕與歷史紀錄
 # ==========================================
 with st.sidebar:
-    # 建立新對話按鈕，點擊時會觸發 start_new_chat 函數
-    st.button("➕ 建立新對話", on_click=start_new_chat, use_container_width=True, type="primary")
-    
+    # 1. 建立新對話按鈕
+    if st.button("➕ 建立新對話", use_container_width=True, type="primary"):
+        # 換一個全新的對話 ID
+        st.session_state.current_thread_id = datetime.now().strftime("thread_%Y%m%d_%H%M%S")
+        # 清空畫面，回到初始問候語
+        st.session_state.messages = [{"role": "assistant", "content": "您好！請問今天想查詢哪方面的造船規範或工程知識？"}]
+        st.rerun()
+
     st.markdown("---")
-    st.header("⚙️ 系統狀態")
-    st.success("API 連線正常")
-    
-    uploaded_image = st.file_uploader("上傳圖片或公式截圖", type=['png', 'jpg', 'jpeg'])
-    
+
+    # 2. 圖片與公式上傳區塊
+    st.markdown("### 📸 上傳圖片或公式截圖")
+    uploaded_image = st.file_uploader("支援 JPG, PNG 格式", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
+
     st.markdown("---")
+
+    # 3. 歷史對話紀錄區塊
     st.header("📝 歷史對話紀錄")
-    # 顯示歷史紀錄 (最新的在最上面)
+    
     if not st.session_state.chat_history:
         st.caption("尚無歷史紀錄")
     else:
+        # 使用 enumerate 與 reversed 來反轉順序並取得索引 (最新的在最上面)
         for idx, chat in enumerate(reversed(st.session_state.chat_history)):
-            with st.expander(f"{chat['time']} - {chat['title']}"):
-                # 在側邊欄簡單預覽過去的問答
-                for msg in chat['messages']:
-                    if msg['role'] == 'user':
-                        st.write(f"**🧑‍💻 User:** {msg['content']}")
-                    elif msg['role'] == 'assistant':
-                        st.caption(f"🤖 Agent: {msg['content'][:30]}...")
+            
+            button_label = f"💬 {chat.get('time', '')} - {chat.get('title', '對話')}"
+            
+            # 每個按鈕必須有獨一無二的 key
+            if st.button(button_label, key=f"history_btn_{chat.get('thread_id', idx)}_{idx}"):
+                
+                # 當按鈕被點擊時，切換 ID 並把歷史對話覆寫到主畫面的變數中
+                st.session_state.current_thread_id = chat.get('thread_id')
+                st.session_state.messages = list(chat['messages'])
+                
+                # 強制重新整理網頁，讓主畫面立刻顯示舊對話
+                st.rerun()
 
 # ==========================================
 # 3. 主畫面與當前對話介面
@@ -75,50 +73,99 @@ st.title("🚢 造船工程助理")
 # 渲染當前歷史對話
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-        if msg.get("sources"):
-            with st.expander("📄 檢視參考資料來源"):
+        # 🛠️ 新增：把 OpenAI 的公式符號替換成 Streamlit 支援的 $$ 與 $
+        safe_content = msg["content"].replace("\\[", "$$").replace("\\]", "$$").replace("\\(", "$").replace("\\)", "$")
+        
+        # 🛠️ 修改：明確使用 st.markdown 來渲染
+        st.markdown(safe_content)
+        
+        # 如果有參考文獻，用折疊面板顯示
+        if "sources" in msg and msg["sources"]:
+            with st.expander("參考文獻"):
                 for src in msg["sources"]:
-                    st.markdown(f"- {src}")
+                    st.write(f"- {src}")
 
-# ==========================================
-# 4. 處理使用者輸入並呼叫後端 API
-# ==========================================
+# 接收使用者輸入
 if prompt := st.chat_input("請輸入您的問題..."):
-    # 顯示使用者問題
+    # 將使用者訊息加入狀態並立刻顯示在畫面上
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.markdown(prompt)
+        st.write(prompt)
 
+    # 處理 AI 回應
     with st.chat_message("assistant"):
-        with st.spinner("後端 Agent 處理中..."):
+        with st.spinner("思考中..."):
             try:
-                if uploaded_image:
+                reply = ""
+                sources = []
+                
+                # 判斷是否有上傳圖片
+                if uploaded_image is not None:
+                    # 呼叫圖片分析 API
                     files = {"file": (uploaded_image.name, uploaded_image.getvalue(), uploaded_image.type)}
                     data = {"prompt": prompt}
-                    res = requests.post(f"{BACKEND_URL}/api/analyze-image", files=files, data=data)
+                    response = requests.post(f"{BACKEND_URL}/api/analyze-image", files=files, data=data)
                 else:
-                    res = requests.post(f"{BACKEND_URL}/api/chat", json={"message": prompt})
+                    # ==========================================
+                    # 🛠️ 偷偷在問題背後加上強制排版的「隱藏指令」
+                    # ==========================================
+                    hidden_instruction = "\n\n[系統隱藏指令：請務必使用 $ 或 $$ 來包覆所有數學公式與變數符號，絕對不要使用反引號 ( ` ) 來呈現數學式。]"
+                    
+                    # 呼叫一般文字對話 API
+                    payload = {
+                        "message": prompt + hidden_instruction, # 將指令和問題綁在一起送給後端
+                        "user_id": "demo-user",
+                        "thread_id": st.session_state.current_thread_id
+                    }
+                    response = requests.post(f"{BACKEND_URL}/api/chat", json=payload)
                 
-                res.raise_for_status()
-                response_data = res.json()
+                if response.status_code == 200:
+                    result = response.json()
+                    reply = result.get("reply", "未收到回應")
+                    
+                    # 🛠️ 新增：接收到新回答時，也立刻替換公式符號
+                    reply = reply.replace("\\[", "$$").replace("\\]", "$$").replace("\\(", "$").replace("\\)", "$")
+                    
+                    sources = result.get("sources", [])
+                else:
+                    reply = f"API 錯誤：{response.status_code} - {response.text}"
                 
-                reply = response_data.get("reply", "發生錯誤，無回傳內容")
-                sources = response_data.get("sources", [])
-
-                # 顯示回覆與來源
+                # 🛠️ 修改：顯示 AI 回覆時明確使用 st.markdown
                 st.markdown(reply)
-                if sources:
-                    with st.expander("📄 檢視參考資料來源"):
-                        for src in sources:
-                            st.markdown(f"- {src}")
                 
-                # 儲存對話
+                
+                            
+                # 儲存對話到 messages
                 st.session_state.messages.append({
                     "role": "assistant",
                     "content": reply,
                     "sources": sources
                 })
                 
-            except requests.exceptions.RequestException as e:
-                st.error(f"無法連線至後端 API，請確認 FastAPI 伺服器是否已啟動。錯誤訊息：{e}")
+                # ==========================================
+                # 同步將這筆對話更新到左側的歷史紀錄中
+                # ==========================================
+                # 1. 抓取使用者的第一句話當作這筆紀錄的「標題」
+                user_msgs = [m["content"] for m in st.session_state.messages if m["role"] == "user"]
+                title = user_msgs[0][:15] + "..." if user_msgs else "新對話"
+                
+                # 2. 找找看歷史紀錄裡有沒有這張「身份證 (thread_id)」
+                record_exists = False
+                for chat in st.session_state.chat_history:
+                    if chat.get("thread_id") == st.session_state.current_thread_id:
+                        # 如果有，就直接更新它的對話內容
+                        chat["messages"] = list(st.session_state.messages)
+                        record_exists = True
+                        break
+                        
+                # 3. 如果是全新的對話，就新增一筆完整的紀錄進去
+                if not record_exists:
+                    st.session_state.chat_history.append({
+                        "thread_id": st.session_state.current_thread_id,
+                        "title": title,
+                        "time": datetime.now().strftime("%H:%M"),
+                        "messages": list(st.session_state.messages)
+                    })
+
+            except Exception as e:
+                st.error(f"連線失敗：{e}")
