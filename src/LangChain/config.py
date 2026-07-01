@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     openai_timeout_seconds: float = Field(default=60, gt=0)
     openai_max_retries: int = Field(default=2, ge=0)
 
+    verbose_output: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:

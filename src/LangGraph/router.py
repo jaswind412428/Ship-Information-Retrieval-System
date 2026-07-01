@@ -1,13 +1,16 @@
-"""Router：讀取短期記憶，重組使用者問題並決定後續流程。"""
+"""Router：讀取短期記憶，判斷是否需要記憶並決定後續流程。
+
+注意：
+目前查詢改寫交給 hsu RAG 的 query_rewriter 處理。
+因此這裡的 router 不再呼叫 LLM 重寫問題，避免兩層重寫互相干擾。
+"""
 
 from __future__ import annotations
 
 from typing import Literal
 
-from langchain_core.messages import HumanMessage, SystemMessage
 from typing_extensions import TypedDict
 
-from LangChain.model import build_chat_model
 from LangGraph.memory_store import load_chat_records
 
 
@@ -122,10 +125,10 @@ def route_question(
     user_id: str = "demo-user",
     thread_id: str = "demo-thread",
 ) -> RouterResult:
-    """用短期記憶重組問題。
+    """讀取短期記憶，判斷是否使用記憶。
 
-    第一版先固定 route 為 retrieve。
-    之後如果要分流成 chat / retrieve / tool，可以再擴充。
+    查詢改寫目前交給 hsu RAG 的 query_rewriter。
+    所以 rewritten_question 保留欄位，但直接使用 original_question。
     """
 
     memory_context = build_memory_context(user_id=user_id, thread_id=thread_id)
@@ -141,56 +144,16 @@ def route_question(
     if _asks_previous_user_message(original_question):
         return {
             "memory_context": memory_context,
-            "rewritten_question": "請根據短期對話記憶回答使用者上一句說了什麼。",
+            "rewritten_question": original_question,
             "route": "retrieve",
             "use_memory": True,
         }
 
     use_memory = _needs_memory_context(original_question)
-    if not use_memory:
-        return {
-            "memory_context": memory_context,
-            "rewritten_question": original_question,
-            "route": "retrieve",
-            "use_memory": False,
-        }
-
-    llm = build_chat_model()
-    response = llm.invoke(
-        [
-            SystemMessage(
-                content=(
-                    "你是 LangGraph router。你的工作是根據短期對話記憶，"
-                    "把使用者的最新問題改寫成第三節點 generate 可以回答的「任務化問題」。"
-                    "你只能改寫問題，不可以回答問題。"
-                    "如果問題需要短期記憶才能回答，請把它改寫成「請根據短期對話記憶回答……」。"
-                    "如果最新問題本身已經清楚，請保持原句或只做必要補全。"
-                    "如果最新問題只是打招呼，例如「你好」，請保持原句，不要改寫成 AI 的回覆。"
-                    "禁止輸出任何已經回答問題的句子。"
-                    "錯誤示範：您剛剛說了「你好」。"
-                    "正確示範：請根據短期對話記憶回答使用者上一句說了什麼。"
-                    "只輸出改寫後的問題，不要解釋。"
-                    "如果使用者問題包含指代詞或序數詞，請保留短期記憶中最相關的原文內容。"
-                    "請使用繁體中文，不要使用簡體中文。"
-                )
-            ),
-            HumanMessage(
-                content=(
-                    f"短期對話記憶：\n{memory_context}\n\n"
-                    f"使用者最新問題：{original_question}\n\n"
-                    "請改寫成給 generate 節點使用的任務化問題："
-                )
-            ),
-        ]
-    )
-
-    rewritten_question = str(response.content).strip()
-    if not rewritten_question:
-        rewritten_question = original_question
 
     return {
         "memory_context": memory_context,
-        "rewritten_question": rewritten_question,
+        "rewritten_question": original_question,
         "route": "retrieve",
         "use_memory": use_memory,
     }

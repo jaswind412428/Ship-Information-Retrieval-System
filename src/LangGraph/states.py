@@ -45,6 +45,11 @@ class GraphState(TypedDict):
     rewritten_question: NotRequired[str]
     memory_context: NotRequired[str]
     use_memory: NotRequired[bool]
+    rag_question: NotRequired[str]
+    retrieved_docs: NotRequired[list[dict[str, object]]]
+    reranked_docs: NotRequired[list[dict[str, object]]]
+    context: NotRequired[str]
+    rag_error: NotRequired[str]
 
 
 def create_initial_state(
